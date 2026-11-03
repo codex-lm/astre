@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Astre</title>
+  <meta name="description" content="Astre — Asteroids back from 1979: inertial rocket, splitting rocks, wrap-around sky, dash, combos, drones and mega-rocks.">
+  <style>
+/* Astre — feuille de style « rétro 50s / atomic age » : crème, tomate, menthe. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+:root {
+  --cream: #f3e9d2;
+  --cream-deep: #e7d9b8;
+  --tomato: #d94f2b;
+  --tomato-deep: #b03a1e;
+  --mint: #7fc8a9;
+  --ink: #2d2a26;
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  background: linear-gradient(165deg, #f7efdd, var(--cream-deep)) fixed;
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 12px 12px 6px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------------------------------------------------------- en-tête */
+#top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.brand h1 {
+  font-size: clamp(40px, 8vw, 64px);
+  letter-spacing: 0.18em;
+  font-weight: 900;
+  color: var(--ink);
+  text-shadow: 3px 3px 0 var(--tomato), 6px 6px 0 rgba(45, 42, 38, 0.15);
+}
+#tagline { font-size: 13.5px; font-style: italic; margin-top: 2px; }
+.topctl { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.langs { display: flex; gap: 4px; }
+
+/* ---------------------------------------------------------------- boutons */
+button {
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  padding: 9px 18px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+}
+button:hover { background: #fbf5e4; }
+button:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+button:focus-visible { outline: 3px solid var(--tomato); outline-offset: 2px; }
+button.primary {
+  background: var(--tomato);
+  color: var(--cream);
+}
+button.big { font-size: 18px; padding: 13px 30px; }
+.pill { padding: 4px 11px; font-size: 12px; box-shadow: 2px 2px 0 var(--ink); border-width: 2px; }
+.pill.active { background: var(--ink); color: var(--cream); }
+
+/* ---------------------------------------------------------------- écrans */
+main { flex: 1; display: flex; flex-direction: column; }
+.screen { animation: fadein 0.25s ease; }
+.hidden { display: none !important; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+.subtitle { margin: 18px 4px; max-width: 56ch; line-height: 1.6; font-size: 15px; }
+.homebtns { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 4px 8px; }
+.keys { opacity: 0.75; font-size: 12.5px; margin: 10px 4px; text-align: center; }
+#hud-best { font-weight: 700; margin: 0 6px; }
+
+/* ---------------------------------------------------------------- jeu */
+#game { display: flex; flex-direction: column; }
+#canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 rgba(45, 42, 38, 0.2);
+  overflow: hidden;
+}
+#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* contrôles tactiles */
+#touch-ui { display: none; }
+body.touch #touch-ui { display: block; }
+#stick {
+  position: absolute;
+  left: 14px; bottom: 14px;
+  width: 110px; height: 110px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: rgba(243, 233, 210, 0.55);
+  touch-action: none;
+}
+#stick-knob {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 46px; height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: var(--tomato);
+  border: 3px solid var(--ink);
+}
+.touchbtn {
+  position: absolute;
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  touch-action: none;
+  user-select: none;
+}
+#btn-fire { right: 16px; bottom: 44px; background: var(--tomato); color: var(--cream); }
+#btn-dash { right: 104px; bottom: 14px; background: var(--mint); }
+body.touch .keys.desktop-only { display: none; }
+
+/* ---------------------------------------------------------------- overlays */
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(45, 42, 38, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  padding: 20px;
+  animation: fadein 0.2s ease;
+}
+#overlay-card {
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 26px 24px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+}
+#overlay-card h2 { font-size: 26px; letter-spacing: 0.08em; margin-bottom: 12px; }
+#overlay-card button { margin-top: 14px; }
+.rules { text-align: left; }
+.rules p { margin: 10px 0; line-height: 1.6; font-size: 14px; }
+.go-title { color: var(--tomato); text-shadow: 2px 2px 0 var(--ink); }
+.newbest {
+  display: inline-block;
+  background: var(--mint);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-weight: 700;
+  transform: rotate(-2deg);
+  margin-bottom: 8px;
+}
+.big { font-size: 20px; font-weight: 900; }
+
+/* ---------------------------------------------------------------- pied */
+footer {
+  margin-top: 14px;
+  padding: 8px 4px 6px;
+  opacity: 0.72;
+  font-size: 11.5px;
+  text-align: center;
+  font-style: italic;
+}
+@supports (padding: env(safe-area-inset-bottom)) {
+  footer { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+}
+
+</style>
+</head>
+<body>
+  <div id="app">
+    <header id="top">
+      <div class="brand">
+        <h1>ASTRE</h1>
+        <p id="tagline"></p>
+      </div>
+      <div class="topctl">
+        <div id="langs" class="langs" role="group" aria-label="Language"></div>
+        <button id="btn-sound" class="ghost"></button>
+      </div>
+    </header>
+
+    <main>
+      <section id="home" class="screen">
+        <p class="subtitle" data-i18n="subtitle"></p>
+        <div class="homebtns">
+          <button id="btn-play" class="primary big"></button>
+          <button id="btn-howto" class="big"></button>
+        </div>
+        <p id="hud-best"></p>
+        <p class="keys desktop-only" data-i18n="keysHint"></p>
+        <p class="keys touch-only" data-i18n="touchHint" style="display:none"></p>
+      </section>
+
+      <section id="game" class="screen hidden">
+        <div id="canvas-wrap">
+          <canvas id="game-canvas"></canvas>
+          <div id="touch-ui">
+            <div id="stick"><div id="stick-knob"></div></div>
+            <button id="btn-fire" class="touchbtn">FIRE</button>
+            <button id="btn-dash" class="touchbtn">DASH</button>
+          </div>
+        </div>
+        <p class="keys desktop-only" data-i18n="keysHint"></p>
+      </section>
+    </main>
+
+    <footer>
+      <span data-i18n="credit"></span>
+    </footer>
+  </div>
+
+  <div id="overlay" class="hidden" role="dialog" aria-modal="true">
+    <div id="overlay-card"></div>
+  </div>
+
+  <script>
+/*
+ * Astre — moteur de jeu pur (sans DOM), déterministe : pas fixe + RNG seedé.
+ * Asteroids remis au goût du jour : champ unique toroïdal, vaisseau à inertie,
+ * astéroïdes qui se fragmentent, dash contrôlé, combo multiplicateur,
+ * drones à patterns, méga-astéroïde boss. Testable sous Node.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.AstreEngine = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var W = 800, H = 600;
+  var DT = 1 / 60;
+  var ROT = 3.8;            // rad/s
+  var THRUST = 300;         // u/s²
+  var DAMP = 0.995;         // amortissement par pas (léger, goût du jour)
+  var BULLET_SPEED = 520, BULLET_LIFE = 1.1, FIRE_CD = 0.22;
+  var DASH_SPEED = 380, DASH_CD = 2.5, DASH_INV = 0.3;
+  var RESPAWN_INV = 2.5;
+  var ROCK_R = { 1: 16, 2: 30, 3: 52, 4: 92 };
+  var ROCK_SCORE = { 1: 100, 2: 50, 3: 20, 4: 500 };
+  var DRONE_SCORE = { big: 200, small: 350 };
+  var COMBO_MAX = 8, COMBO_WINDOW = 2.0, SLOWMO_T = 0.45, SLOWMO_SCALE = 0.35;
+  var SAFE_SPAWN = 220, SAFE_RESPAWN = 140;
+
+  // RNG mulberry32 à état sérialisable
+  function rndNext(s) {
+    s = (s + 0x6d2b79f5) | 0;
+    var t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return { s: s, v: ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
+  }
+
+  function wrap(v, max) { v = v % max; if (v < 0) v += max; return v; }
+
+  function createGame(opts) {
+    opts = opts || {};
+    var g = {
+      W: W, H: H, t: 0,
+      rngS: (opts.seed >>> 0) || 20261103,
+      ship: { x: W / 2, y: H / 2, vx: 0, vy: 0, angle: -Math.PI / 2, invuln: 2.0, lives: 3, fireCd: 0, dashCd: 0, gone: false },
+      bullets: [], ebullets: [], rocks: [], drones: [],
+      score: 0, wave: 0, waveBreak: 1.2, combo: 0, comboT: 0,
+      nextLifeAt: 10000, over: false, slowmo: 0, droneT: 8, kills: 0,
+      events: []
+    };
+    spawnWave(g, 1);
+    return g;
+  }
+
+  function rng(g) {
+    var r = rndNext(g.rngS);
+    g.rngS = r.s;
+    return r.v;
+  }
+
+  function makeRock(g, size, x, y, vx, vy) {
+    var n = 9 + Math.floor(rng(g) * 5);
+    var shape = [];
+    for (var i = 0; i < n; i++) shape.push(0.72 + rng(g) * 0.38);
+    var speed = size === 4 ? 26 : (size === 3 ? 46 : size === 2 ? 78 : 118);
+    if (vx === undefined) {
+      var a = rng(g) * Math.PI * 2;
+      var m = speed * (0.6 + rng(g) * 0.7);
+      vx = Math.cos(a) * m; vy = Math.sin(a) * m;
+    }
+    return { x: x, y: y, vx: vx, vy: vy, r: ROCK_R[size], size: size,
+             ang: rng(g) * Math.PI * 2, angV: (rng(g) - 0.5) * 1.6,
+             shape: shape, hp: size === 4 ? 12 : 1 };
+  }
+
+  function spawnWave(g, wave) {
+    g.wave = wave;
+    var n = Math.min(3 + wave, 8);
+    for (var i = 0; i < n; i++) {
+      var x, y, tries = 0;
+      do {
+        x = rng(g) * W; y = rng(g) * H; tries++;
+      } while (tries < 60 && dist2(x, y, g.ship.x, g.ship.y) < SAFE_SPAWN * SAFE_SPAWN);
+      g.rocks.push(makeRock(g, 3, x, y));
+    }
+    if (wave % 4 === 0) g.rocks.push(makeRock(g, 4, rng(g) * W, rng(g) < 0.5 ? 40 : H - 40));
+    g.events.push({ type: 'wave', wave: wave });
+  }
+
+  function dist2(ax, ay, bx, by) {
+    var dx = ax - bx, dy = ay - by;
+    return dx * dx + dy * dy;
+  }
+
+  function fragment(g, rock) {
+    if (rock.size <= 1) return;
+    for (var k = 0; k < 2; k++) {
+      var a = rng(g) * Math.PI * 2;
+      var m = 60 + rng(g) * 70;
+      g.rocks.push(makeRock(g, rock.size - 1,
+        rock.x + Math.cos(a) * rock.r * 0.4, rock.y + Math.sin(a) * rock.r * 0.4,
+        rock.vx + Math.cos(a) * m, rock.vy + Math.sin(a) * m));
+    }
+  }
+
+  function addScore(g, base) {
+    var mult = Math.max(1, g.combo);
+    g.score += base * mult;
+    if (g.score >= g.nextLifeAt) {
+      g.ship.lives++;
+      g.nextLifeAt += 10000;
+      g.events.push({ type: 'extraLife', lives: g.ship.lives });
+    }
+  }
+
+  function killCombo(g) {
+    g.kills++;
+    if (g.comboT > 0) g.combo = Math.min(COMBO_MAX, g.combo + 1);
+    else g.combo = 1;
+    g.comboT = COMBO_WINDOW;
+    if (g.combo === COMBO_MAX && g.slowmo <= 0) { g.slowmo = SLOWMO_T; g.events.push({ type: 'comboMax' }); }
+    else g.events.push({ type: 'comboUp', combo: g.combo });
+  }
+
+  function respawnShip(g) {
+    var spots = [[W / 2, H / 2]];
+    for (var i = 0; i < 8; i++) {
+      var a = i * Math.PI / 4;
+      spots.push([W / 2 + Math.cos(a) * 180, H / 2 + Math.sin(a) * 180]);
+    }
+    for (var s = 0; s < spots.length; s++) {
+      var ok = true;
+      for (var r = 0; r < g.rocks.length && ok; r++)
+        if (dist2(spots[s][0], spots[s][1], g.rocks[r].x, g.rocks[r].y) < SAFE_RESPAWN * SAFE_RESPAWN) ok = false;
+      if (ok) { g.ship.x = wrap(spots[s][0], W); g.ship.y = wrap(spots[s][1], H); break; }
+    }
+    g.ship.vx = 0; g.ship.vy = 0;
+    g.ship.invuln = RESPAWN_INV;
+    g.ship.gone = false;
+  }
+
+  function spawnDrone(g) {
+    var big = rng(g) < 0.55;
+    var fromLeft = rng(g) < 0.5;
+    g.drones.push({
+      x: fromLeft ? -30 : W + 30, y: 60 + rng(g) * (H - 120),
+      vx: (fromLeft ? 1 : -1) * (big ? 70 : 110), vy: 0,
+      big: big, hp: big ? 2 : 1, phase: rng(g) * Math.PI * 2, fireT: 1.2
+    });
+  }
+
+  /*
+   * Un pas de simulation. input = { left, right, thrust, fire, dash }.
+   * Renvoie les événements du pas (sons/particules côté rendu).
+   */
+  function step(g, input) {
+    g.events = [];
+    if (g.over) return g.events;
+    var scale = g.slowmo > 0 ? SLOWMO_SCALE : 1;
+    var dt = DT * scale;
+    g.t += dt;
+    if (g.slowmo > 0) g.slowmo -= DT;
+    var sh = g.ship;
+
+    // ---- vaisseau
+    if (!sh.gone) {
+      if (input.left) sh.angle -= ROT * dt;
+      if (input.right) sh.angle += ROT * dt;
+      if (input.thrust) {
+        sh.vx += Math.cos(sh.angle) * THRUST * dt;
+        sh.vy += Math.sin(sh.angle) * THRUST * dt;
+      }
+      if (input.dash && sh.dashCd <= 0) {
+        sh.vx += Math.cos(sh.angle) * DASH_SPEED;
+        sh.vy += Math.sin(sh.angle) * DASH_SPEED;
+        sh.dashCd = DASH_CD;
+        sh.invuln = Math.max(sh.invuln, DASH_INV);
+        g.events.push({ type: 'dash' });
+      }
+      sh.dashCd = Math.max(0, sh.dashCd - DT);
+      sh.invuln = Math.max(0, sh.invuln - DT);
+      sh.fireCd = Math.max(0, sh.fireCd - DT);
+      if (input.fire && sh.fireCd <= 0) {
+        sh.fireCd = FIRE_CD;
+        g.bullets.push({
+          x: sh.x + Math.cos(sh.angle) * 18, y: sh.y + Math.sin(sh.angle) * 18,
+          vx: sh.vx + Math.cos(sh.angle) * BULLET_SPEED,
+          vy: sh.vy + Math.sin(sh.angle) * BULLET_SPEED,
+          life: BULLET_LIFE
+        });
+        g.events.push({ type: 'shoot' });
+      }
+      sh.vx *= DAMP; sh.vy *= DAMP;
+      sh.x = wrap(sh.x + sh.vx * dt, W);
+      sh.y = wrap(sh.y + sh.vy * dt, H);
+    }
+
+    // ---- projectiles
+    for (var b = g.bullets.length - 1; b >= 0; b--) {
+      var bu = g.bullets[b];
+      bu.life -= dt;
+      bu.x = wrap(bu.x + bu.vx * dt, W);
+      bu.y = wrap(bu.y + bu.vy * dt, H);
+      if (bu.life <= 0) g.bullets.splice(b, 1);
+    }
+    for (var e = g.ebullets.length - 1; e >= 0; e--) {
+      var eb = g.ebullets[e];
+      eb.life -= dt;
+      eb.x = wrap(eb.x + eb.vx * dt, W);
+      eb.y = wrap(eb.y + eb.vy * dt, H);
+      if (eb.life <= 0) g.ebullets.splice(e, 1);
+    }
+
+    // ---- astéroïdes
+    for (var r = 0; r < g.rocks.length; r++) {
+      var rk = g.rocks[r];
+      rk.x = wrap(rk.x + rk.vx * dt, W);
+      rk.y = wrap(rk.y + rk.vy * dt, H);
+      rk.ang += rk.angV * dt;
+    }
+
+    // ---- drones
+    for (var d = 0; d < g.drones.length; d++) {
+      var dr = g.drones[d];
+      dr.phase += dt * 2.2;
+      dr.x += dr.vx * dt;
+      dr.y = wrap(dr.y + Math.sin(dr.phase) * 60 * dt, H);
+      dr.fireT -= dt;
+      if (dr.fireT <= 0 && !sh.gone) {
+        dr.fireT = dr.big ? 1.7 : 1.1;
+        var aim = Math.atan2(sh.y - dr.y, sh.x - dr.x);
+        aim += (rng(g) - 0.5) * (dr.big ? 0.7 : 0.24);
+        g.ebullets.push({ x: dr.x, y: dr.y, vx: Math.cos(aim) * 300, vy: Math.sin(aim) * 300, life: 3.0 });
+        g.events.push({ type: 'droneShoot' });
+      }
+    }
+    // drones sortis de l'écran (marge large)
+    for (var d2 = g.drones.length - 1; d2 >= 0; d2--)
+      if (g.drones[d2].x < -80 || g.drones[d2].x > W + 80) g.drones.splice(d2, 1);
+
+    // ---- drones : apparition
+    g.droneT -= dt;
+    if (g.droneT <= 0 && g.wave >= 2 && g.drones.length < 2 && g.waveBreak <= 0) {
+      spawnDrone(g);
+      g.droneT = 11 + rng(g) * 5;
+      g.events.push({ type: 'droneIn' });
+    }
+
+    // ---- collisions projectiles joueur → astéroïdes
+    for (var b2 = g.bullets.length - 1; b2 >= 0; b2--) {
+      var bu2 = g.bullets[b2];
+      for (var r2 = g.rocks.length - 1; r2 >= 0; r2--) {
+        var rk2 = g.rocks[r2];
+        if (dist2(bu2.x, bu2.y, rk2.x, rk2.y) < rk2.r * rk2.r) {
+          g.bullets.splice(b2, 1);
+          rk2.hp--;
+          if (rk2.hp <= 0) {
+            g.rocks.splice(r2, 1);
+            fragment(g, rk2);
+            killCombo(g);
+            addScore(g, ROCK_SCORE[rk2.size]);
+            g.events.push({ type: 'boom', x: rk2.x, y: rk2.y, size: rk2.size, score: ROCK_SCORE[rk2.size] * Math.max(1, g.combo) });
+          } else {
+            g.events.push({ type: 'clink', x: rk2.x, y: rk2.y });
+          }
+          break;
+        }
+      }
+    }
+
+    // ---- projectiles joueur → drones
+    for (var b3 = g.bullets.length - 1; b3 >= 0; b3--) {
+      var bu3 = g.bullets[b3];
+      for (var d3 = g.drones.length - 1; d3 >= 0; d3--) {
+        var dr3 = g.drones[d3];
+        var rr = dr3.big ? 26 : 18;
+        if (dist2(bu3.x, bu3.y, dr3.x, dr3.y) < rr * rr) {
+          g.bullets.splice(b3, 1);
+          dr3.hp--;
+          if (dr3.hp <= 0) {
+            g.drones.splice(d3, 1);
+            killCombo(g);
+            addScore(g, DRONE_SCORE[dr3.big ? 'big' : 'small']);
+            g.events.push({ type: 'droneDown', x: dr3.x, y: dr3.y, big: dr3.big });
+          }
+          break;
+        }
+      }
+    }
+
+    // ---- vaisseau ← astéroïdes
+    if (!sh.gone && sh.invuln <= 0) {
+      for (var r3 = 0; r3 < g.rocks.length; r3++) {
+        var rk3 = g.rocks[r3];
+        var reach = rk3.r + 12;
+        if (dist2(sh.x, sh.y, rk3.x, rk3.y) < reach * reach) {
+          g.rocks.splice(r3, 1);
+          fragment(g, rk3);
+          sh.lives--;
+          g.combo = 0; g.comboT = 0;
+          g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
+          if (sh.lives < 0) {
+            g.over = true;
+            g.events.push({ type: 'gameOver', score: g.score });
+          } else {
+            sh.gone = true;
+            g.respawnT = 0.9;
+          }
+          break;
+        }
+      }
+      // vaisseau ← drones / tirs ennemis
+      for (var d4 = 0; d4 < g.drones.length && !sh.gone && !g.over; d4++) {
+        var dr4 = g.drones[d4];
+        var rr4 = dr4.big ? 30 : 22;
+        if (dist2(sh.x, sh.y, dr4.x, dr4.y) < rr4 * rr4) {
+          g.drones.splice(d4, 1);
+          sh.lives--; g.combo = 0; g.comboT = 0;
+          g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
+          if (sh.lives < 0) { g.over = true; g.events.push({ type: 'gameOver', score: g.score }); }
+          else { sh.gone = true; g.respawnT = 0.9; }
+        }
+      }
+      for (var e2 = 0; e2 < g.ebullets.length && !sh.gone && !g.over; e2++) {
+        var eb2 = g.ebullets[e2];
+        if (dist2(sh.x, sh.y, eb2.x, eb2.y) < 14 * 14) {
+          g.ebullets.splice(e2, 1);
+          sh.lives--; g.combo = 0; g.comboT = 0;
+          g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
+          if (sh.lives < 0) { g.over = true; g.events.push({ type: 'gameOver', score: g.score }); }
+          else { sh.gone = true; g.respawnT = 0.9; }
+        }
+      }
+    }
+
+    // respawn différé
+    if (sh.gone && !g.over) {
+      g.respawnT -= DT;
+      if (g.respawnT <= 0) respawnShip(g);
+    }
+
+    // ---- combo : fenêtre
+    if (g.comboT > 0) {
+      g.comboT -= dt;
+      if (g.comboT <= 0) g.combo = 0;
+    }
+
+    // ---- fin de vague
+    if (g.rocks.length === 0 && g.drones.length === 0 && g.waveBreak <= 0 && !g.over) {
+      g.waveBreak = 2.0;
+    }
+    if (g.waveBreak > 0) {
+      g.waveBreak -= DT;
+      if (g.waveBreak <= 0 && g.rocks.length === 0 && g.drones.length === 0) {
+        spawnWave(g, g.wave + 1);
+      }
+    }
+
+    return g.events;
+  }
+
+  return { W: W, H: H, DT: DT, createGame: createGame, step: step,
+           wrap: wrap, dist2: dist2, ROCK_R: ROCK_R, spawnWave: spawnWave,
+           makeRock: makeRock, respawnShip: respawnShip, COMBO_MAX: COMBO_MAX };
+});
+
+</script>
+  <script>
+/*
+ * Astre — interface multilingue (EN par défaut, FR, ES).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.AstreI18n = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  var dict = {
+    en: {
+      tagline: "Asteroids, back from 1979",
+      subtitle: "One rocket, one wrap-around sky, rocks that split. Modern touches: a dash you can trust, combo chains, drones and a mega-rock every fourth wave.",
+      play: "Play",
+      howTo: "How to play",
+      rulesTitle: "How to play",
+      rule1: "Steer with momentum: the rocket keeps drifting — short bursts, calm hands. The sky wraps around at every edge.",
+      rule2: "Shoot the rocks. Big ones split into mediums, mediums into smalls; small ones vanish. Each kill within 2 s of the last raises the combo, up to ×8; otherwise it resets to ×1. Reaching ×8 triggers a brief slow-motion beat.",
+      rule3: "DASH gives a quick burst along your nose and a heartbeat of immunity — it replaces the old risky hyperspace. It recharges in 2.5 s.",
+      rule4: "Drones hunt you from wave 2; every fourth wave ends with a 12-HP mega-rock — destroy it to clear the wave. Extra life every 10 000 points.",
+      keysHint: "Arrows / WASD · Space: fire · Shift: dash · P: pause",
+      touchHint: "Left stick steers · FIRE and DASH on the right",
+      score: "Score",
+      best: "Best",
+      wave: "Wave",
+      lives: "Lives",
+      gameOver: "Game over",
+      finalScore: "Final score",
+      newBest: "New best!",
+      replay: "Play again",
+      menu: "Menu",
+      paused: "Paused",
+      resume: "Resume",
+      langLabel: "Language",
+      soundOn: "Sound on",
+      soundOff: "Sound off",
+      close: "Close",
+      credit: "A game by Cédric Bernadac, created with AI agents.",
+      gotIt: "Got it"
+    },
+    fr: {
+      tagline: "Asteroids, revenu de 1979",
+      subtitle: "Une fusée, un ciel qui boucle sur lui-même, des rochers qui se scindent. Touches modernes : un dash fiable, des combos, des drones et un méga-rocher à chaque quatrième vague.",
+      play: "Jouer",
+      howTo: "Comment jouer",
+      rulesTitle: "Comment jouer",
+      rule1: "Le pilotage est inertiel : la fusée continue de dériver — petites poussées, mains calmes. Le ciel boucle à chaque bord.",
+      rule2: "Tirez sur les rochers. Les gros se scindent en moyens, les moyens en petits, les petits disparaissent. Chaque destruction à moins de 2 s de la précédente monte le combo, jusqu'à ×8 ; sinon il retombe à ×1. Atteindre ×8 déclenche un bref temps ralenti.",
+      rule3: "Le DASH donne une impulsion dans l'axe du nez et un battement d'immunité — il remplace l'ancien hyperespace risqué. Il se recharge en 2,5 s.",
+      rule4: "Les drones vous chassent dès la vague 2 ; chaque quatrième vague se termine par un méga-rocher à 12 PV — détruisez-le pour valider la vague. Vie supplémentaire tous les 10 000 points.",
+      keysHint: "Flèches / ZQSD · Espace : tir · Maj : dash · P : pause",
+      touchHint: "Stick à gauche pour piloter · FEU et DASH à droite",
+      score: "Score",
+      best: "Record",
+      wave: "Vague",
+      lives: "Vies",
+      gameOver: "Partie terminée",
+      finalScore: "Score final",
+      newBest: "Nouveau record !",
+      replay: "Rejouer",
+      menu: "Menu",
+      paused: "En pause",
+      resume: "Reprendre",
+      langLabel: "Langue",
+      soundOn: "Son activé",
+      soundOff: "Son coupé",
+      close: "Fermer",
+      credit: "Un jeu de Cédric Bernadac, créé avec des agents IA.",
+      gotIt: "Compris"
+    },
+    es: {
+      tagline: "Asteroids, de vuelta desde 1979",
+      subtitle: "Un cohete, un cielo que se envuelve en sí mismo, rocas que se parten. Toques modernos: un impulso fiable, combos, drones y una megarroca cada cuarta ola.",
+      play: "Jugar",
+      howTo: "Cómo jugar",
+      rulesTitle: "Cómo jugar",
+      rule1: "El pilotaje es inercial: el cohete sigue derivando — empujones cortos, manos tranquilas. El cielo se envuelve en cada borde.",
+      rule2: "Dispara a las rocas. Las grandes se parten en medianas, las medianas en pequeñas, las pequeñas desaparecen. Cada destrucción a menos de 2 s de la anterior sube el combo, hasta ×8; si no, vuelve a ×1. Alcanzar ×8 activa un breve instante a cámara lenta.",
+      rule3: "El DASH da un impulso en la dirección de la nariz y un latido de inmunidad — sustituye al viejo hipersalto arriesgado. Se recarga en 2,5 s.",
+      rule4: "Los drones te cazan desde la ola 2; cada cuarta ola termina con una megarroca de 12 PV — destrúyela para superar la ola. Vida extra cada 10 000 puntos.",
+      keysHint: "Flechas / WASD · Espacio: disparo · Mayús: dash · P: pausa",
+      touchHint: "Stick a la izquierda para pilotar · FUEGO y DASH a la derecha",
+      score: "Puntos",
+      best: "Récord",
+      wave: "Ola",
+      lives: "Vidas",
+      gameOver: "Fin de la partida",
+      finalScore: "Puntuación final",
+      newBest: "¡Nuevo récord!",
+      replay: "Jugar otra vez",
+      menu: "Menú",
+      paused: "En pausa",
+      resume: "Continuar",
+      langLabel: "Idioma",
+      soundOn: "Sonido activado",
+      soundOff: "Sonido silenciado",
+      close: "Cerrar",
+      credit: "Un juego de Cédric Bernadac, creado con agentes de IA.",
+      gotIt: "Entendido"
+    }
+  };
+  return {
+    langs: ['en', 'fr', 'es'],
+    dict: dict,
+    get: function (lang, key) {
+      var d = dict[lang] || dict.en;
+      return d[key] !== undefined ? d[key] : dict.en[key];
+    }
+  };
+});
+
+</script>
+  <script>
+/*
+ * Astre — mini-synthé WebAudio : tirs, explosions, thrust, dash, combos.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.AstreAudio = factory(root);
+})(typeof self !== 'undefined' ? self : this, function (root) {
+  'use strict';
+  var ctx = null, enabled = true, noiseBuf = null, thrustNode = null;
+
+  function ensure() {
+    if (!ctx) {
+      var AC = root.AudioContext || root.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function noise(c) {
+    if (!noiseBuf) {
+      noiseBuf = c.createBuffer(1, c.sampleRate * 0.4, c.sampleRate);
+      var data = noiseBuf.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    return noiseBuf;
+  }
+
+  function tone(freq, dur, type, gain, when, slideTo) {
+    if (!enabled) return;
+    try {
+      var c = ensure();
+      if (!c) return;
+      var t = c.currentTime + (when || 0);
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(gain || 0.1, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.05);
+    } catch (e) { /* silence */ }
+  }
+
+  function boomNoise(dur, freq, gain) {
+    if (!enabled) return;
+    try {
+      var c = ensure();
+      if (!c) return;
+      var src = c.createBufferSource();
+      src.buffer = noise(c);
+      var f = c.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.setValueAtTime(freq, c.currentTime);
+      f.frequency.exponentialRampToValueAtTime(80, c.currentTime + dur);
+      var g = c.createGain();
+      g.gain.setValueAtTime(gain, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+      src.connect(f); f.connect(g); g.connect(c.destination);
+      src.start(); src.stop(c.currentTime + dur + 0.05);
+    } catch (e) { /* silence */ }
+  }
+
+  return {
+    setEnabled: function (v) {
+      enabled = !!v;
+      if (!v && thrustNode) this.thrust(false);
+    },
+    isEnabled: function () { return enabled; },
+    unlock: function () { ensure(); },
+    shoot: function () { tone(760, 0.07, 'square', 0.045, 0, 240); },
+    clink: function () { tone(1250, 0.05, 'triangle', 0.05); },
+    boom: function (size) {
+      var f = size === 4 ? 900 : size === 3 ? 700 : size === 2 ? 500 : 380;
+      boomNoise(size === 4 ? 0.5 : 0.28, f, size === 4 ? 0.22 : 0.14);
+    },
+    droneShoot: function () { tone(320, 0.08, 'sawtooth', 0.035, 0, 180); },
+    droneDown: function () { boomNoise(0.35, 800, 0.16); tone(520, 0.12, 'square', 0.05); },
+    dash: function () { tone(240, 0.22, 'sine', 0.09, 0, 720); },
+    shipHit: function () { boomNoise(0.6, 500, 0.2); tone(300, 0.5, 'sawtooth', 0.07, 0, 60); },
+    extraLife: function () { [660, 880, 1100].forEach(function (f, i) { tone(f, 0.14, 'square', 0.06, i * 0.09); }); },
+    comboUp: function (n) { tone(500 + n * 90, 0.07, 'square', 0.05); },
+    comboMax: function () { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, 0.16, 'sine', 0.07, i * 0.05); }); },
+    wave: function () { tone(392, 0.14, 'triangle', 0.08); tone(523, 0.2, 'triangle', 0.08, 0.14); },
+    gameOver: function () { [330, 262, 196, 131].forEach(function (f, i) { tone(f, 0.35, 'triangle', 0.09, i * 0.22); }); },
+    ui: function () { tone(700, 0.05, 'sine', 0.05); },
+    thrust: function (on) {
+      if (!enabled) on = false;
+      try {
+        var c = ensure();
+        if (!c) return;
+        if (on && !thrustNode) {
+          var src = c.createBufferSource();
+          src.buffer = noise(c); src.loop = true;
+          var f = c.createBiquadFilter();
+          f.type = 'bandpass'; f.frequency.value = 220; f.Q.value = 0.6;
+          var g = c.createGain();
+          g.gain.setValueAtTime(0.0001, c.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.05, c.currentTime + 0.05);
+          src.connect(f); f.connect(g); g.connect(c.destination);
+          src.start();
+          thrustNode = { src: src, g: g };
+        } else if (!on && thrustNode) {
+          var tn = thrustNode; thrustNode = null;
+          tn.g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.1);
+          setTimeout(function () { try { tn.src.stop(); } catch (e) {} }, 200);
+        }
+      } catch (e) { thrustNode = null; }
+    }
+  };
+});
+
+</script>
+  <script>
+/*
+ * Astre — rendu canvas « rétro 50s » : crème, tomate, menthe, encre.
+ * Décor cosmétique uniquement : le gameplay vit dans engine.js.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(root);
+  else root.AstreRender = factory(root);
+})(typeof self !== 'undefined' ? self : this, function (root) {
+  'use strict';
+
+  var COL = {
+    cream: '#f3e9d2', creamDeep: '#e7d9b8', ink: '#2d2a26',
+    tomato: '#d94f2b', tomatoDeep: '#b03a1e', mint: '#7fc8a9',
+    beige: '#d9c9a8', chrome: '#f7f4ea', shadow: 'rgba(45,42,38,0.22)'
+  };
+
+  function create(canvas) {
+    var ctx = canvas.getContext('2d');
+    var stars = [], grain = null;
+    for (var i = 0; i < 90; i++)
+      stars.push({ x: Math.random(), y: Math.random(), s: Math.random() < 0.25 ? 2.4 : 1.4 });
+
+    var particles = [];
+    var shake = 0;
+    var waveBanner = null;   // {text, t}
+    var scaleX = 1, scaleY = 1, offX = 0, offY = 0;
+
+    function resize(cssW, cssH) {
+      var dpr = Math.min(root.devicePixelRatio || 1, 2);
+      canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+      canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // letterbox du monde 800×600
+      var margin = 8;
+      var s = Math.min((cssW - margin) / 800, (cssH - margin) / 600);
+      scaleX = s; scaleY = s;
+      offX = (cssW - 800 * s) / 2;
+      offY = (cssH - 600 * s) / 2;
+      buildGrain(cssW, cssH);
+    }
+
+    function buildGrain(w, h) {
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.floor(w / 3));
+      c.height = Math.max(1, Math.floor(h / 3));
+      var g = c.getContext('2d');
+      g.fillStyle = COL.cream; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = 'rgba(45,42,38,0.05)';
+      for (var i = 0; i < c.width * c.height / 34; i++)
+        g.fillRect(Math.random() * c.width, Math.random() * c.height, 1, 1);
+      grain = c;
+    }
+
+    function addParticles(x, y, n, color, speed) {
+      for (var i = 0; i < n; i++) {
+        var a = Math.random() * Math.PI * 2;
+        var m = (0.3 + Math.random() * 0.7) * speed;
+        particles.push({ x: x, y: y, vx: Math.cos(a) * m, vy: Math.sin(a) * m,
+                         life: 0.4 + Math.random() * 0.5, t: 0, color: color, r: 1.5 + Math.random() * 2.5 });
+      }
+    }
+
+    function banner(text) { waveBanner = { text: text, t: 0 }; }
+
+    function onEvent(ev, t) {
+      if (ev.type === 'boom') {
+        addParticles(ev.x, ev.y, 8 + ev.size * 4, ev.size >= 3 ? COL.tomato : COL.mint, 120);
+        if (ev.size >= 3) shake = Math.min(10, shake + (ev.size === 4 ? 10 : 5));
+      } else if (ev.type === 'shipHit') {
+        addParticles(ev.x, ev.y, 20, COL.tomato, 160);
+        shake = 12;
+      } else if (ev.type === 'droneDown') {
+        addParticles(ev.x, ev.y, 16, COL.mint, 150);
+        shake = Math.min(9, shake + 5);
+      } else if (ev.type === 'wave') {
+        banner(t('wave') + ' ' + ev.wave);
+      }
+    }
+
+    function t(key) { return (root.AstreI18n && root.AstreI18n.get(root.__astreLang || 'en', key)) || key; }
+
+    function drawShip(g) {
+      var sh = g.ship;
+      if (sh.gone) return;
+      // clignote pendant l'invulnérabilité
+      if (sh.invuln > 0 && Math.floor(sh.invuln * 12) % 2 === 0) return;
+      ctx.save();
+      ctx.translate(sh.x, sh.y);
+      ctx.rotate(sh.angle + Math.PI / 2);
+      // flamme
+      if (g.__thrusting) {
+        ctx.fillStyle = COL.tomato;
+        ctx.beginPath();
+        ctx.moveTo(-4, 12); ctx.lineTo(4, 12); ctx.lineTo(0, 20 + Math.random() * 6);
+        ctx.closePath(); ctx.fill();
+      }
+      // coque chrome
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = COL.ink;
+      ctx.fillStyle = COL.chrome;
+      ctx.beginPath();
+      ctx.moveTo(0, -16); ctx.lineTo(11, 10); ctx.lineTo(5, 7);
+      ctx.lineTo(0, 12); ctx.lineTo(-5, 7); ctx.lineTo(-11, 10);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // hublot
+      ctx.fillStyle = COL.tomato;
+      ctx.beginPath(); ctx.arc(0, -4, 3.2, 0, Math.PI * 2); ctx.fill();
+      // recharge dash : arc autour
+      if (sh.dashCd > 0) {
+        ctx.strokeStyle = 'rgba(127,200,169,0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, -Math.PI / 2, -Math.PI / 2 + (1 - sh.dashCd / 2.5) * Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = COL.mint; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawRock(rk) {
+      ctx.save();
+      ctx.translate(rk.x, rk.y);
+      ctx.rotate(rk.ang);
+      var fill = rk.size === 4 ? COL.tomatoDeep : rk.size === 3 ? COL.beige : rk.size === 2 ? COL.tomato : COL.mint;
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = COL.ink;
+      ctx.lineWidth = rk.size >= 3 ? 3 : 2.6;
+      ctx.beginPath();
+      var n = rk.shape.length;
+      for (var i = 0; i < n; i++) {
+        var a = (i / n) * Math.PI * 2;
+        var rr = rk.r * rk.shape[i];
+        var x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // cratères (deterministes par indice)
+      ctx.fillStyle = 'rgba(45,42,38,0.18)';
+      for (var c = 0; c < Math.min(3, rk.size); c++) {
+        var ca = (c * 2.4 + rk.r) % (Math.PI * 2);
+        var cd = rk.r * 0.36;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ca) * cd, Math.sin(ca) * cd, rk.r * 0.16 + 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (rk.size === 4) {
+        // cœur du boss : compte de PV restant
+        ctx.fillStyle = COL.cream;
+        ctx.beginPath(); ctx.arc(0, 0, rk.r * 0.42, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = COL.ink; ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = COL.ink;
+        ctx.font = 'bold ' + Math.round(rk.r * 0.4) + 'px Georgia';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(rk.hp), 0, 1);
+      }
+      ctx.restore();
+    }
+
+    function drawDrone(dr) {
+      ctx.save();
+      ctx.translate(dr.x, dr.y);
+      var w = dr.big ? 26 : 18;
+      ctx.fillStyle = COL.mint;
+      ctx.strokeStyle = COL.ink;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w, w * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, -w * 0.25, w * 0.5, w * 0.32, 0, Math.PI, Math.PI * 2);
+      ctx.fillStyle = COL.chrome; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = COL.tomato;
+      ctx.beginPath(); ctx.arc(0, 0, w * 0.16, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    function draw(g, dtReal, labels) {
+      var cssW = canvas.width / (Math.min(root.devicePixelRatio || 1, 2));
+      var cssH = canvas.height / (Math.min(root.devicePixelRatio || 1, 2));
+      ctx.save();
+      // fond + grain + étoiles
+      ctx.fillStyle = COL.cream;
+      ctx.fillRect(0, 0, cssW, cssH);
+      if (grain) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(grain, 0, 0, cssW, cssH);
+        ctx.imageSmoothingEnabled = true;
+      }
+      ctx.fillStyle = COL.creamDeep;
+      for (var s = 0; s < stars.length; s++) {
+        var sx = stars[s].x * cssW, sy = stars[s].y * cssH;
+        ctx.fillRect(sx, sy, stars[s].s, stars[s].s);
+        if (stars[s].s > 2) {
+          ctx.fillRect(sx - 2.4, sy + 0.5, 2.4, 1);
+          ctx.fillRect(sx + stars[s].s + 0.2, sy + 0.5, 2.4, 1);
+        }
+      }
+      // ralenti : vignette tomate légère
+      if (g.slowmo > 0) {
+        ctx.fillStyle = 'rgba(217,79,43,' + (0.10 * Math.min(1, g.slowmo / 0.45)) + ')';
+        ctx.fillRect(0, 0, cssW, cssH);
+      }
+
+      // monde (letterbox + secousse)
+      var shx = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+      var shy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+      if (shake > 0) shake = Math.max(0, shake - dtReal * 34);
+      ctx.translate(offX + shx, offY + shy);
+      ctx.scale(scaleX, scaleY);
+      ctx.strokeStyle = COL.ink;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(0, 0, 800, 600);
+
+      g.rocks.forEach(drawRock);
+      g.drones.forEach(drawDrone);
+      // projectiles
+      ctx.strokeStyle = COL.ink;
+      ctx.lineWidth = 2.6;
+      g.bullets.forEach(function (b) {
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(b.x - b.vx * 0.016, b.y - b.vy * 0.016);
+        ctx.stroke();
+      });
+      ctx.fillStyle = COL.tomato;
+      g.ebullets.forEach(function (b) {
+        ctx.beginPath(); ctx.arc(b.x, b.y, 3.4, 0, Math.PI * 2); ctx.fill();
+      });
+      drawShip(g);
+
+      // particules
+      for (var p = particles.length - 1; p >= 0; p--) {
+        var pt = particles[p];
+        pt.t += dtReal;
+        if (pt.t >= pt.life) { particles.splice(p, 1); continue; }
+        pt.x += pt.vx * dtReal; pt.y += pt.vy * dtReal;
+        pt.vx *= 0.96; pt.vy *= 0.96;
+        var alpha = 1 - pt.t / pt.life;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r * alpha + 0.6, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // HUD in-canvas
+      ctx.fillStyle = COL.ink;
+      ctx.font = 'bold 26px Georgia';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(String(g.score).padStart(6, '0'), 14, 12);
+      ctx.font = '13px Georgia';
+      ctx.fillText(labels.wave + ' ' + g.wave, 14, 44);
+      // vies : petites fusées
+      for (var l = 0; l < Math.max(0, g.ship.lives); l++) {
+        ctx.save();
+        ctx.translate(760 - l * 24, 26);
+        ctx.rotate(0);
+        ctx.fillStyle = COL.tomato;
+        ctx.beginPath();
+        ctx.moveTo(0, -8); ctx.lineTo(6, 7); ctx.lineTo(0, 4); ctx.lineTo(-6, 7);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      // combo
+      if (g.combo > 1) {
+        var pulse = 1 + 0.08 * Math.sin(g.t * 10);
+        ctx.save();
+        ctx.translate(400, 70);
+        ctx.scale(pulse, pulse);
+        ctx.rotate(-0.05);
+        ctx.fillStyle = COL.tomato;
+        ctx.strokeStyle = COL.ink; ctx.lineWidth = 2.5;
+        ctx.font = 'bold 30px Georgia';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        var txt = '×' + g.combo;
+        var wid = ctx.measureText(txt).width + 22;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(-wid / 2, -22, wid, 44, 10) : ctx.rect(-wid / 2, -22, wid, 44);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = COL.cream;
+        ctx.fillText(txt, 0, 1);
+        ctx.restore();
+      }
+      // bannière de vague
+      if (waveBanner) {
+        waveBanner.t += dtReal;
+        var alpha = waveBanner.t < 0.3 ? waveBanner.t / 0.3 : Math.max(0, 1 - (waveBanner.t - 1.2) / 0.5);
+        if (alpha <= 0) waveBanner = null;
+        else {
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = COL.ink;
+          ctx.font = 'bold 54px Georgia';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.save();
+          ctx.translate(400, 260); ctx.rotate(-0.04);
+          ctx.fillStyle = COL.tomato;
+          ctx.strokeStyle = COL.ink; ctx.lineWidth = 3;
+          var w2 = ctx.measureText(waveBanner.text).width + 40;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(-w2 / 2, -40, w2, 80, 14) : ctx.rect(-w2 / 2, -40, w2, 80);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = COL.cream;
+          ctx.fillText(waveBanner.text, 0, 2);
+          ctx.restore();
+          ctx.globalAlpha = 1;
+        }
+      }
+      ctx.restore();
+    }
+
+    return { resize: resize, draw: draw, onEvent: onEvent, banner: banner };
+  }
+
+  return { create: create, COL: COL };
+});
+
+</script>
+  <script>
+/*
+ * Astre — contrôleur : boucle à pas fixe (accumulateur + garde-fou), entrées
+ * clavier et tactiles, écrans, pause, hook QA.
+ */
+(function () {
+  'use strict';
+  var E = window.AstreEngine, I18N = window.AstreI18n, AU = window.AstreAudio;
+
+  var SAVE_KEY = 'astre.save.v1';
+  var save = { lang: 'en', sound: true, best: 0 };
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      var p = JSON.parse(raw);
+      save = { lang: p.lang || 'en', sound: p.sound !== false, best: p.best || 0 };
+    }
+  } catch (e) {}
+  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+  function t(k) { return I18N.get(save.lang, k); }
+  window.__astreLang = save.lang;
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function show(node, on) { node.classList.toggle('hidden', !on); }
+
+  var canvas = $('game-canvas');
+  var renderer = window.AstreRender.create(canvas);
+  var g = null;
+  var running = false, paused = false;
+  var input = { left: false, right: false, thrust: false, fire: false, dash: false };
+  var touchAim = null;        // {angle, force} du stick
+  var acc = 0, last = 0;
+  var watchdog = null;
+
+  // ---------------------------------------------------------------- écrans
+  function renderTexts() {
+    window.__astreLang = save.lang;
+    document.documentElement.lang = save.lang;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = t(nodes[i].getAttribute('data-i18n'));
+    $('tagline').textContent = t('tagline');
+    $('btn-play').textContent = t('play');
+    $('btn-howto').textContent = t('howTo');
+    $('btn-sound').textContent = (save.sound ? '♪ ' : '✕ ') + t(save.sound ? 'soundOn' : 'soundOff');
+    $('hud-best').textContent = t('best') + ' ' + save.best;
+    renderLangPills();
+  }
+
+  function renderLangPills() {
+    var box = $('langs');
+    box.textContent = '';
+    I18N.langs.forEach(function (code) {
+      var b = el('button', 'pill' + (save.lang === code ? ' active' : ''), code.toUpperCase());
+      b.addEventListener('click', function () {
+        save.lang = code; persist(); AU.ui(); renderTexts();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function startGame() {
+    var seed = (Date.now() & 0xffffffff) >>> 0;
+    g = E.createGame({ seed: seed });
+    g.__thrusting = false;
+    running = true; paused = false;
+    show($('home'), false);
+    show($('game'), true);
+    closeOverlay();
+    last = performance.now();
+    acc = 0;
+    resize();
+  }
+
+  function gameOver() {
+    running = false;
+    AU.thrust(false);
+    var isBest = g.score > save.best;
+    if (isBest) { save.best = g.score; persist(); }
+    var box = el('div', 'modal');
+    box.appendChild(el('h2', 'go-title', t('gameOver')));
+    if (isBest) box.appendChild(el('p', 'newbest', t('newBest')));
+    box.appendChild(el('p', 'big', t('finalScore') + ' : ' + g.score));
+    box.appendChild(el('p', null, t('best') + ' : ' + save.best + ' · ' + t('wave') + ' ' + g.wave));
+    var again = el('button', 'primary big', t('replay'));
+    again.addEventListener('click', function () { AU.ui(); startGame(); });
+    box.appendChild(again);
+    var menu = el('button', null, t('menu'));
+    menu.addEventListener('click', function () { AU.ui(); goMenu(); });
+    box.appendChild(menu);
+    overlay(box);
+  }
+
+  function goMenu() {
+    running = false; g = null;
+    show($('game'), false);
+    show($('home'), true);
+    closeOverlay();
+    renderTexts();
+  }
+
+  // ---------------------------------------------------------------- overlays
+  function overlay(content) {
+    var card = $('overlay-card');
+    card.textContent = '';
+    card.appendChild(content);
+    show($('overlay'), true);
+  }
+  function closeOverlay() { show($('overlay'), false); }
+
+  function showRules() {
+    var box = el('div', 'rules');
+    box.appendChild(el('h2', null, t('rulesTitle')));
+    [1, 2, 3, 4].forEach(function (n) { box.appendChild(el('p', null, t('rule' + n))); });
+    var btn = el('button', 'primary', t('gotIt'));
+    btn.addEventListener('click', function () { AU.ui(); closeOverlay(); if (paused) showPause(); });
+    box.appendChild(btn);
+    overlay(box);
+  }
+
+  function showPause() {
+    var box = el('div', 'modal');
+    box.appendChild(el('h2', null, t('paused')));
+    var r = el('button', 'primary big', t('resume'));
+    r.addEventListener('click', function () {
+      AU.ui(); closeOverlay(); paused = false; last = performance.now();
+    });
+    box.appendChild(r);
+    var q = el('button', null, t('menu'));
+    q.addEventListener('click', function () { AU.ui(); paused = false; goMenu(); });
+    box.appendChild(q);
+    overlay(box);
+  }
+
+  // ---------------------------------------------------------------- boucle
+  function applyTouchAim() {
+    if (!touchAim || touchAim.force < 0.25) return;
+    var want = touchAim.angle;
+    var cur = g.ship.angle;
+    var d = want - cur;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    input.left = d < -0.12;
+    input.right = d > 0.12;
+    input.thrust = touchAim.force > 0.55;
+  }
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!running || paused || !g) return;
+    var dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    if (touchAim) applyTouchAim();
+    g.__thrusting = input.thrust;
+    AU.thrust(input.thrust && !g.ship.gone);
+    acc += dt;
+    var steps = 0;
+    while (acc >= E.DT && steps < 4) {
+      var events = E.step(g, input);
+      input.dash = false; // dash = front unique
+      for (var i = 0; i < events.length; i++) {
+        var ev = events[i];
+        renderer.onEvent(ev, t);
+        if (ev.type === 'shoot') AU.shoot();
+        else if (ev.type === 'boom') AU.boom(ev.size);
+        else if (ev.type === 'clink') AU.clink();
+        else if (ev.type === 'dash') AU.dash();
+        else if (ev.type === 'shipHit') AU.shipHit();
+        else if (ev.type === 'droneShoot') AU.droneShoot();
+        else if (ev.type === 'droneDown') AU.droneDown();
+        else if (ev.type === 'extraLife') AU.extraLife();
+        else if (ev.type === 'comboUp') AU.comboUp(ev.combo);
+        else if (ev.type === 'comboMax') AU.comboMax();
+        else if (ev.type === 'wave') AU.wave();
+        else if (ev.type === 'gameOver') setTimeout(gameOver, 900);
+      }
+      acc -= E.DT;
+      steps++;
+    }
+    renderer.draw(g, dt, { wave: t('wave') });
+  }
+
+  // garde-fou : si le rAF est étranglé (onglet caché), un minuteur avance peu ;
+  // on choisit de mettre en pause plutôt que d'accumuler.
+  watchdog = setInterval(function () {
+    if (running && !paused && document.hidden) {
+      paused = true;
+      AU.thrust(false);
+      showPause();
+    }
+  }, 800);
+
+  function resize() {
+    var wrap = $('canvas-wrap');
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    renderer.resize(w, h);
+  }
+  window.addEventListener('resize', function () { if (g) resize(); });
+
+  // ---------------------------------------------------------------- entrées
+  document.addEventListener('keydown', function (ev) {
+    // rejeu instantané : Espace/Entrée relance depuis l'écran de fin
+    if (!running && g && !document.getElementById('overlay').classList.contains('hidden') &&
+        (ev.key === ' ' || ev.key === 'Enter')) {
+      ev.preventDefault();
+      startGame();
+      return;
+    }
+    if (!running) return;
+    var k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'q') { input.left = true; ev.preventDefault(); }
+    if (k === 'ArrowRight' || k === 'd') { input.right = true; ev.preventDefault(); }
+    if (k === 'ArrowUp' || k === 'w' || k === 'z') { input.thrust = true; ev.preventDefault(); }
+    if (k === ' ') { input.fire = true; ev.preventDefault(); AU.unlock(); }
+    if (k === 'Shift') { input.dash = true; ev.preventDefault(); }
+    if (k === 'p') {
+      paused = !paused;
+      if (paused) { AU.thrust(false); showPause(); } else { last = performance.now(); closeOverlay(); }
+    }
+  });
+  document.addEventListener('keyup', function (ev) {
+    var k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'q') input.left = false;
+    if (k === 'ArrowRight' || k === 'd') input.right = false;
+    if (k === 'ArrowUp' || k === 'w' || k === 'z') input.thrust = false;
+    if (k === ' ') input.fire = false;
+  });
+
+  // joystick tactile gauche : le stick pilote le cap (asservi) + poussée
+  var stick = $('stick'), knob = $('stick-knob');
+  var stickId = null, stickCx = 0, stickCy = 0;
+  function stickMove(x, y) {
+    var dx = x - stickCx, dy = y - stickCy;
+    var d = Math.min(1, Math.hypot(dx, dy) / 46);
+    var a = Math.atan2(dy, dx);
+    touchAim = { angle: a, force: d };
+    knob.style.transform = 'translate(' + Math.cos(a) * d * 34 + 'px,' + Math.sin(a) * d * 34 + 'px)';
+  }
+  function stickEnd() {
+    stickId = null; touchAim = null;
+    input.left = input.right = input.thrust = false;
+    knob.style.transform = 'translate(0,0)';
+  }
+  stick.addEventListener('touchstart', function (ev) {
+    ev.preventDefault();
+    AU.unlock();
+    var to = ev.changedTouches[0];
+    stickId = to.identifier;
+    var r = stick.getBoundingClientRect();
+    stickCx = r.left + r.width / 2; stickCy = r.top + r.height / 2;
+    stickMove(to.clientX, to.clientY);
+  }, { passive: false });
+  document.addEventListener('touchmove', function (ev) {
+    if (stickId === null) return;
+    for (var i = 0; i < ev.changedTouches.length; i++)
+      if (ev.changedTouches[i].identifier === stickId) {
+        ev.preventDefault();
+        stickMove(ev.changedTouches[i].clientX, ev.changedTouches[i].clientY);
+      }
+  }, { passive: false });
+  document.addEventListener('touchend', function (ev) {
+    for (var i = 0; i < ev.changedTouches.length; i++)
+      if (ev.changedTouches[i].identifier === stickId) stickEnd();
+  });
+
+  function holdButton(id, on, off) {
+    var b = $(id);
+    b.addEventListener('touchstart', function (e) { e.preventDefault(); AU.unlock(); on(); }, { passive: false });
+    b.addEventListener('touchend', function (e) { e.preventDefault(); off(); }, { passive: false });
+    b.addEventListener('mousedown', on);
+    b.addEventListener('mouseup', off);
+    b.addEventListener('mouseleave', off);
+  }
+  holdButton('btn-fire', function () { input.fire = true; }, function () { input.fire = false; });
+  holdButton('btn-dash', function () { input.dash = true; }, function () { input.dash = false; });
+
+  // afficher les contrôles tactiles sur écran tactile
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+    document.body.classList.add('touch');
+  window.addEventListener('touchstart', function () { document.body.classList.add('touch'); }, { once: true, passive: true });
+
+  // ---------------------------------------------------------------- boutons
+  $('btn-play').addEventListener('click', function () { AU.ui(); AU.unlock(); startGame(); });
+  $('btn-howto').addEventListener('click', function () { AU.ui(); showRules(); });
+  $('btn-sound').addEventListener('click', function () {
+    save.sound = !save.sound; persist();
+    AU.setEnabled(save.sound);
+    renderTexts();
+    if (save.sound) AU.ui();
+  });
+  $('overlay').addEventListener('click', function (ev) {
+    if (ev.target === $('overlay') && !paused) closeOverlay();
+  });
+
+  // hook QA (?debug=1) : piloter le moteur sans dépendre du rAF
+  if (location.search.indexOf('debug=1') !== -1) {
+    window.__astre = {
+      g: function () { return g; },
+      engine: E,
+      input: input,
+      start: startGame,
+      step: function (n, inp) {
+        var saved = {};
+        for (var k in input) { saved[k] = input[k]; if (inp && k in inp) input[k] = inp[k]; }
+        var all = [];
+        for (var i = 0; i < (n || 1); i++) all = all.concat(E.step(g, input));
+        for (var k2 in saved) input[k2] = saved[k2];
+        renderer.draw(g, 1 / 60, { wave: t('wave') });
+        return all;
+      },
+      draw: function () { if (g) renderer.draw(g, 1 / 60, { wave: t('wave') }); },
+      gameOver: gameOver,
+      save: save
+    };
+  }
+
+  // ---------------------------------------------------------------- départ
+  AU.setEnabled(save.sound);
+  renderTexts();
+  show($('home'), true);
+  resize();
+  requestAnimationFrame(frame);
+})();
+
+</script>
+</body>
+</html>
