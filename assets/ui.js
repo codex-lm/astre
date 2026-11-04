@@ -114,7 +114,7 @@
   function showRules() {
     var box = el('div', 'rules');
     box.appendChild(el('h2', null, t('rulesTitle')));
-    [1, 2, 3, 4].forEach(function (n) { box.appendChild(el('p', null, t('rule' + n))); });
+    [1, 2, 3, 4, 5].forEach(function (n) { box.appendChild(el('p', null, t('rule' + n))); });
     var btn = el('button', 'primary', t('gotIt'));
     btn.addEventListener('click', function () { AU.ui(); closeOverlay(); if (paused) showPause(); });
     box.appendChild(btn);
@@ -148,6 +148,18 @@
     input.thrust = touchAim.force > 0.55;
   }
 
+  var hbT = 0; // heartbeat : s'accélère quand il reste peu de rochers
+
+  function snap(g) {
+    return {
+      ship: { x: g.ship.x, y: g.ship.y },
+      bullets: g.bullets.map(function (b) { return [b.x, b.y]; }),
+      ebullets: g.ebullets.map(function (b) { return [b.x, b.y]; }),
+      drones: g.drones.map(function (d) { return [d.x, d.y]; }),
+      powerUps: g.powerUps.map(function (p) { return [p.x, p.y]; })
+    };
+  }
+
   function frame(now) {
     requestAnimationFrame(frame);
     if (!running || paused || !g) return;
@@ -158,17 +170,21 @@
     AU.thrust(input.thrust && !g.ship.gone);
     acc += dt;
     var steps = 0;
+    var prev = null;
     while (acc >= E.DT && steps < 4) {
+      prev = snap(g);
       var events = E.step(g, input);
       input.dash = false; // dash = front unique
       for (var i = 0; i < events.length; i++) {
         var ev = events[i];
         renderer.onEvent(ev, t);
-        if (ev.type === 'shoot') AU.shoot();
+        if (ev.type === 'shoot') AU.shoot(ev.triple);
         else if (ev.type === 'boom') AU.boom(ev.size);
         else if (ev.type === 'clink') AU.clink();
         else if (ev.type === 'dash') AU.dash();
         else if (ev.type === 'shipHit') AU.shipHit();
+        else if (ev.type === 'shieldHit') AU.shieldHit();
+        else if (ev.type === 'pickup') AU.pickup(ev.kind);
         else if (ev.type === 'droneShoot') AU.droneShoot();
         else if (ev.type === 'droneDown') AU.droneDown();
         else if (ev.type === 'extraLife') AU.extraLife();
@@ -180,7 +196,14 @@
       acc -= E.DT;
       steps++;
     }
-    renderer.draw(g, dt, { wave: t('wave') });
+    // heartbeat discret, plus rapide quand il reste peu de rochers
+    hbT -= dt;
+    if (hbT <= 0 && !g.over) {
+      AU.heartbeat(0.55 + 0.5 * Math.min(g.rocks.length, 6) / 6);
+      hbT = 0.55 + 0.5 * Math.min(g.rocks.length, 6) / 6;
+    }
+    var alpha = Math.min(1, acc / E.DT);
+    renderer.draw(g, dt, { wave: t('wave') }, alpha, prev);
   }
 
   // garde-fou : si le rAF est étranglé (onglet caché), un minuteur avance peu ;
@@ -308,10 +331,10 @@
         var all = [];
         for (var i = 0; i < (n || 1); i++) all = all.concat(E.step(g, input));
         for (var k2 in saved) input[k2] = saved[k2];
-        renderer.draw(g, 1 / 60, { wave: t('wave') });
+        renderer.draw(g, 1 / 60, { wave: t('wave') }, 1, null);
         return all;
       },
-      draw: function () { if (g) renderer.draw(g, 1 / 60, { wave: t('wave') }); },
+      draw: function () { if (g) renderer.draw(g, 1 / 60, { wave: t('wave') }, 1, null); },
       gameOver: gameOver,
       save: save
     };

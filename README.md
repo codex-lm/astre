@@ -12,7 +12,10 @@ life every 10 000 points.
 ## How to play
 
 - **Arrow keys or WASD/ZQSD** steer; **Space** fires; **Shift** dashes;
-  **P** pauses.
+  **P** pauses. **Space/Enter** restarts instantly after a game over.
+- **Round badges drop from wrecks**: triple fire (three chevrons), a
+  one-hit shield (target ring), slow rocks (hourglass) and a rare golden
+  star (extra life). They fade — grab them fast.
 - **On touch**: a left stick steers the rocket (push far to thrust), **FIRE**
   and **DASH** buttons on the right.
 - The rocket keeps drifting — short bursts, calm hands. The sky wraps around
@@ -40,10 +43,15 @@ python -m http.server 8143       # then open http://localhost:8143/
   1/60 steps, a seeded RNG, a wrap-around field, inertial flight, splitting
   rocks, drones that lead their shots, combos with a two-second window, a
   twelve-hit mega-rock. The renderer (`assets/render.js`) is cosmetic only.
-- 17 Node tests cover inertia, wrapping, exact fragmentation, scoring with
+- 24 Node tests cover inertia, wrapping, exact fragmentation, scoring with
   combo multipliers, ship hits with invulnerability, game over, wave
   progression, the mega-rock, the dash, extra lives, drone behaviour, safe
-  spawns, the slow-motion beat and full replayability.
+  spawns, the slow-motion beat, full replayability, and the v1.1.0 power-up
+  system (drops, pickups, timed effects, shield absorption, hit-stop).
+- v1.1.0 rendering interpolates between fixed steps (smooth 60 fps), adds
+  hit-stop on big impacts, pop-fragmentation, floating scores, combo
+  stickers, an animated retro sun, engine trail and power-up badges — with a
+  hard particle cap so effects never hide the gameplay.
 - Palette: **retro 1950s / atomic age** — cream sky, tomato and mint rocks by
   size, chrome rocket, sticker typography. A deliberate fourth step of the
   workshop's visual rotation, and the exact opposite of the original game's

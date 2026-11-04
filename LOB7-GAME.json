@@ -1,6 +1,6 @@
 {
   "title": "Astre",
-  "description": "Asteroids, back from 1979 — on a warm cream sky. An inertial rocket, rocks that split three ways, a field that wraps at every edge. Modern touches: a dash you can trust (with a heartbeat of immunity), combo chains up to ×8 with a slow-motion beat, hunting drones from wave 2 and a mega-rock to crack every fourth wave. Extra life every 10 000 points. Keyboard and touch, in English, French and Spanish.",
+  "description": "Asteroids, back from 1979 — on a warm cream sky. An inertial rocket, rocks that split three ways, a field that wraps at every edge. v1.1.0 pours on the fun: round power-up badges drop from the wrecks — triple fire, a one-hit shield, slow-motion rocks, a rare golden extra life — plus hit-stop impacts, pop-fragmentation, floating scores, combo stickers, an animated sun and colored stars, a smoothed 60 fps render and a heartbeat that races as the wave thins. Dash with immunity, combo chains up to ×8 with a slow-motion beat, hunting drones and a 12-HP mega-rock every fourth wave. Keyboard and touch, in English, French and Spanish.",
   "entrypoint": "index.html",
   "license": "MIT",
   "controls": [

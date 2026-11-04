@@ -70,7 +70,10 @@
     },
     isEnabled: function () { return enabled; },
     unlock: function () { ensure(); },
-    shoot: function () { tone(760, 0.07, 'square', 0.045, 0, 240); },
+    shoot: function (triple) {
+      tone(760, 0.07, 'square', 0.045, 0, 240);
+      if (triple) tone(950, 0.06, 'square', 0.03, 0.02, 300);
+    },
     clink: function () { tone(1250, 0.05, 'triangle', 0.05); },
     boom: function (size) {
       var f = size === 4 ? 900 : size === 3 ? 700 : size === 2 ? 500 : 380;
@@ -86,6 +89,14 @@
     wave: function () { tone(392, 0.14, 'triangle', 0.08); tone(523, 0.2, 'triangle', 0.08, 0.14); },
     gameOver: function () { [330, 262, 196, 131].forEach(function (f, i) { tone(f, 0.35, 'triangle', 0.09, i * 0.22); }); },
     ui: function () { tone(700, 0.05, 'sine', 0.05); },
+    pickup: function (kind) {
+      if (kind === 'life') { [660, 880, 1100, 1320].forEach(function (f, i) { tone(f, 0.12, 'sine', 0.07, i * 0.07); }); }
+      else if (kind === 'triple') { tone(520, 0.08, 'square', 0.06); tone(780, 0.08, 'square', 0.06, 0.08); tone(1040, 0.1, 'square', 0.06, 0.16); }
+      else if (kind === 'shield') { tone(440, 0.14, 'sine', 0.07); tone(660, 0.18, 'sine', 0.07, 0.1); }
+      else { tone(700, 0.1, 'sine', 0.06, 0, 340); }
+    },
+    shieldHit: function () { tone(1250, 0.16, 'triangle', 0.08); tone(940, 0.2, 'triangle', 0.06, 0.05); },
+    heartbeat: function () { tone(72, 0.09, 'sine', 0.045, 0, 50); },
     thrust: function (on) {
       if (!enabled) on = false;
       try {

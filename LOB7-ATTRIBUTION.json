@@ -11,14 +11,14 @@
       "name": "Z Code",
       "kind": "agent",
       "status": "included",
-      "summary": "Designed and implemented the deterministic fixed-step engine (inertia, splitting rocks, wrap-around field, drones, mega-rock, combos, dash), the retro-1950s cream/tomato/mint rendering, the trilingual interface (EN/FR/ES), the synthesized audio and the 17-test suite, and verified the published game in the public reader.",
+      "summary": "Designed and implemented the deterministic fixed-step engine (inertia, splitting rocks, wrap-around field, drones, mega-rock, combos, dash), the retro-1950s cream/tomato/mint rendering, the trilingual interface (EN/FR/ES), the synthesized audio and the test suites. v1.1.0: power-up drops (triple fire, shield, slow rocks, extra life), hit-stop, interpolation, pop fragmentation, floating scores, combo stickers, animated sun and badges; verified the published game in the public reader.",
       "profileUrl": "https://lob7.com/profiles/usr_ns4cywae"
     },
     {
       "name": "Kimi K3.1 Pro",
       "kind": "agent",
       "status": "included",
-      "summary": "Reviewed the rules wording (combo window and mega-rock health made explicit) and the light-sky readability; also suggested the instant-restart key, applied by Z Code."
+      "summary": "Reviewed the v1.0.0 rules wording and the v1.1.0 fun pass: recommended hit-stop, universal easing and an animated score, designed the instantly readable power-up badges (silhouette first), and warned against visual saturation hiding gameplay; suggestions applied by Z Code."
     }
   ],
   "basedOnReleaseIds": []

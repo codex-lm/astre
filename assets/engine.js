@@ -23,6 +23,18 @@
   var DRONE_SCORE = { big: 200, small: 350 };
   var COMBO_MAX = 8, COMBO_WINDOW = 2.0, SLOWMO_T = 0.45, SLOWMO_SCALE = 0.35;
   var SAFE_SPAWN = 220, SAFE_RESPAWN = 140;
+  var PU_LIFE = 10.0, PU_R = 20;
+  var TRIPLE_T = 8.0, SLOWFX_T = 4.0, SLOWFX_SCALE = 0.45;
+
+  var PU_DROPRATE = { rock: { 3: 0.16, 2: 0.13, 1: 0.10 }, drone: { big: 0.25, small: 0.30 } };
+
+  function makePowerUp(g, x, y) {
+    var r = rng(g);
+    var type = r < 0.34 ? 'triple' : r < 0.61 ? 'shield' : r < 0.90 ? 'slow' : 'life';
+    var a = rng(g) * Math.PI * 2;
+    return { type: type, x: x, y: y,
+             vx: Math.cos(a) * 22, vy: Math.sin(a) * 22, life: PU_LIFE, age: 0 };
+  }
 
   // RNG mulberry32 à état sérialisable
   function rndNext(s) {
@@ -40,7 +52,8 @@
       W: W, H: H, t: 0,
       rngS: (opts.seed >>> 0) || 20261103,
       ship: { x: W / 2, y: H / 2, vx: 0, vy: 0, angle: -Math.PI / 2, invuln: 2.0, lives: 3, fireCd: 0, dashCd: 0, gone: false },
-      bullets: [], ebullets: [], rocks: [], drones: [],
+      bullets: [], ebullets: [], rocks: [], drones: [], powerUps: [],
+      fx: { triple: 0, slow: 0 }, shield: false, hitStop: 0, deathSlow: 0,
       score: 0, wave: 0, waveBreak: 1.2, combo: 0, comboT: 0,
       nextLifeAt: 10000, over: false, slowmo: 0, droneT: 8, kills: 0,
       events: []
@@ -67,7 +80,7 @@
     }
     return { x: x, y: y, vx: vx, vy: vy, r: ROCK_R[size], size: size,
              ang: rng(g) * Math.PI * 2, angV: (rng(g) - 0.5) * 1.6,
-             shape: shape, hp: size === 4 ? 12 : 1 };
+             shape: shape, hp: size === 4 ? 12 : 1, age: 0 };
   }
 
   function spawnWave(g, wave) {
@@ -119,6 +132,37 @@
     else g.events.push({ type: 'comboUp', combo: g.combo });
   }
 
+  // un power-up tombe-t-il de cette destruction ?
+  function maybeDrop(g, kind, size, x, y) {
+    var rate = PU_DROPRATE[kind][size];
+    if (rate === undefined || rng(g) >= rate) return;
+    g.powerUps.push(makePowerUp(g, x, y));
+  }
+
+  // un coup reçu : le bouclier l'absorbe, sinon une vie part
+  function applyHit(g, x, y) {
+    var sh = g.ship;
+    if (g.shield) {
+      g.shield = false;
+      sh.invuln = 1.2;
+      g.hitStop = 3;
+      g.events.push({ type: 'shieldHit', x: x, y: y });
+      return;
+    }
+    sh.lives--;
+    g.combo = 0; g.comboT = 0;
+    g.hitStop = 4;
+    g.deathSlow = 0.45;
+    g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
+    if (sh.lives < 0) {
+      g.over = true;
+      g.events.push({ type: 'gameOver', score: g.score });
+    } else {
+      sh.gone = true;
+      g.respawnT = 0.9;
+    }
+  }
+
   function respawnShip(g) {
     var spots = [[W / 2, H / 2]];
     for (var i = 0; i < 8; i++) {
@@ -153,11 +197,15 @@
   function step(g, input) {
     g.events = [];
     if (g.over) return g.events;
-    var scale = g.slowmo > 0 ? SLOWMO_SCALE : 1;
+    // hit-stop : gel bref (steps entiers) sur les gros impacts
+    if (g.hitStop > 0) { g.hitStop--; return g.events; }
+    var scale = g.slowmo > 0 ? SLOWMO_SCALE : (g.deathSlow > 0 ? 0.3 : 1);
     var dt = DT * scale;
     g.t += dt;
     if (g.slowmo > 0) g.slowmo -= DT;
+    if (g.deathSlow > 0) g.deathSlow -= DT;
     var sh = g.ship;
+    var rockDt = dt * (g.fx.slow > 0 ? SLOWFX_SCALE : 1);
 
     // ---- vaisseau
     if (!sh.gone) {
@@ -179,13 +227,16 @@
       sh.fireCd = Math.max(0, sh.fireCd - DT);
       if (input.fire && sh.fireCd <= 0) {
         sh.fireCd = FIRE_CD;
-        g.bullets.push({
-          x: sh.x + Math.cos(sh.angle) * 18, y: sh.y + Math.sin(sh.angle) * 18,
-          vx: sh.vx + Math.cos(sh.angle) * BULLET_SPEED,
-          vy: sh.vy + Math.sin(sh.angle) * BULLET_SPEED,
-          life: BULLET_LIFE
+        var spread = g.fx.triple > 0 ? [-0.16, 0, 0.16] : [0];
+        spread.forEach(function (off) {
+          g.bullets.push({
+            x: sh.x + Math.cos(sh.angle) * 18, y: sh.y + Math.sin(sh.angle) * 18,
+            vx: sh.vx + Math.cos(sh.angle + off) * BULLET_SPEED,
+            vy: sh.vy + Math.sin(sh.angle + off) * BULLET_SPEED,
+            life: BULLET_LIFE
+          });
         });
-        g.events.push({ type: 'shoot' });
+        g.events.push({ type: 'shoot', triple: spread.length === 3 });
       }
       sh.vx *= DAMP; sh.vy *= DAMP;
       sh.x = wrap(sh.x + sh.vx * dt, W);
@@ -203,25 +254,26 @@
     for (var e = g.ebullets.length - 1; e >= 0; e--) {
       var eb = g.ebullets[e];
       eb.life -= dt;
-      eb.x = wrap(eb.x + eb.vx * dt, W);
-      eb.y = wrap(eb.y + eb.vy * dt, H);
+      eb.x = wrap(eb.x + eb.vx * rockDt, W);
+      eb.y = wrap(eb.y + eb.vy * rockDt, H);
       if (eb.life <= 0) g.ebullets.splice(e, 1);
     }
 
-    // ---- astéroïdes
+    // ---- astéroïdes (ralentis par le power-up slow)
     for (var r = 0; r < g.rocks.length; r++) {
       var rk = g.rocks[r];
-      rk.x = wrap(rk.x + rk.vx * dt, W);
-      rk.y = wrap(rk.y + rk.vy * dt, H);
-      rk.ang += rk.angV * dt;
+      rk.x = wrap(rk.x + rk.vx * rockDt, W);
+      rk.y = wrap(rk.y + rk.vy * rockDt, H);
+      rk.ang += rk.angV * rockDt;
+      rk.age += dt;
     }
 
-    // ---- drones
+    // ---- drones (ralentis par slow)
     for (var d = 0; d < g.drones.length; d++) {
       var dr = g.drones[d];
       dr.phase += dt * 2.2;
-      dr.x += dr.vx * dt;
-      dr.y = wrap(dr.y + Math.sin(dr.phase) * 60 * dt, H);
+      dr.x += dr.vx * rockDt;
+      dr.y = wrap(dr.y + Math.sin(dr.phase) * 60 * rockDt, H);
       dr.fireT -= dt;
       if (dr.fireT <= 0 && !sh.gone) {
         dr.fireT = dr.big ? 1.7 : 1.1;
@@ -256,6 +308,8 @@
             fragment(g, rk2);
             killCombo(g);
             addScore(g, ROCK_SCORE[rk2.size]);
+            if (rk2.size >= 3) g.hitStop = 3;
+            maybeDrop(g, 'rock', rk2.size, rk2.x, rk2.y);
             g.events.push({ type: 'boom', x: rk2.x, y: rk2.y, size: rk2.size, score: ROCK_SCORE[rk2.size] * Math.max(1, g.combo) });
           } else {
             g.events.push({ type: 'clink', x: rk2.x, y: rk2.y });
@@ -278,12 +332,34 @@
             g.drones.splice(d3, 1);
             killCombo(g);
             addScore(g, DRONE_SCORE[dr3.big ? 'big' : 'small']);
+            g.hitStop = 3;
+            maybeDrop(g, 'drone', dr3.big ? 'big' : 'small', dr3.x, dr3.y);
             g.events.push({ type: 'droneDown', x: dr3.x, y: dr3.y, big: dr3.big });
           }
           break;
         }
       }
     }
+
+    // ---- power-ups : dérive, expiration, ramassage
+    for (var p = g.powerUps.length - 1; p >= 0; p--) {
+      var pu = g.powerUps[p];
+      pu.life -= dt;
+      pu.age += dt;
+      pu.x = wrap(pu.x + pu.vx * dt, W);
+      pu.y = wrap(pu.y + pu.vy * dt, H);
+      if (pu.life <= 0) { g.powerUps.splice(p, 1); continue; }
+      if (!sh.gone && dist2(sh.x, sh.y, pu.x, pu.y) < (PU_R + 16) * (PU_R + 16)) {
+        g.powerUps.splice(p, 1);
+        if (pu.type === 'triple') g.fx.triple = TRIPLE_T;
+        else if (pu.type === 'shield') g.shield = true;
+        else if (pu.type === 'slow') g.fx.slow = SLOWFX_T;
+        else if (pu.type === 'life') sh.lives++;
+        g.events.push({ type: 'pickup', x: pu.x, y: pu.y, kind: pu.type });
+      }
+    }
+    g.fx.triple = Math.max(0, g.fx.triple - DT);
+    g.fx.slow = Math.max(0, g.fx.slow - DT);
 
     // ---- vaisseau ← astéroïdes
     if (!sh.gone && sh.invuln <= 0) {
@@ -293,16 +369,7 @@
         if (dist2(sh.x, sh.y, rk3.x, rk3.y) < reach * reach) {
           g.rocks.splice(r3, 1);
           fragment(g, rk3);
-          sh.lives--;
-          g.combo = 0; g.comboT = 0;
-          g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
-          if (sh.lives < 0) {
-            g.over = true;
-            g.events.push({ type: 'gameOver', score: g.score });
-          } else {
-            sh.gone = true;
-            g.respawnT = 0.9;
-          }
+          applyHit(g, rk3.x, rk3.y);
           break;
         }
       }
@@ -312,20 +379,14 @@
         var rr4 = dr4.big ? 30 : 22;
         if (dist2(sh.x, sh.y, dr4.x, dr4.y) < rr4 * rr4) {
           g.drones.splice(d4, 1);
-          sh.lives--; g.combo = 0; g.comboT = 0;
-          g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
-          if (sh.lives < 0) { g.over = true; g.events.push({ type: 'gameOver', score: g.score }); }
-          else { sh.gone = true; g.respawnT = 0.9; }
+          applyHit(g, dr4.x, dr4.y);
         }
       }
       for (var e2 = 0; e2 < g.ebullets.length && !sh.gone && !g.over; e2++) {
         var eb2 = g.ebullets[e2];
         if (dist2(sh.x, sh.y, eb2.x, eb2.y) < 14 * 14) {
           g.ebullets.splice(e2, 1);
-          sh.lives--; g.combo = 0; g.comboT = 0;
-          g.events.push({ type: 'shipHit', x: sh.x, y: sh.y, lives: sh.lives });
-          if (sh.lives < 0) { g.over = true; g.events.push({ type: 'gameOver', score: g.score }); }
-          else { sh.gone = true; g.respawnT = 0.9; }
+          applyHit(g, eb2.x, eb2.y);
         }
       }
     }
