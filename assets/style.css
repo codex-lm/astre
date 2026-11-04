@@ -37,6 +37,28 @@ body {
   font-weight: 900;
   color: var(--ink);
   text-shadow: 3px 3px 0 var(--tomato), 6px 6px 0 rgba(45, 42, 38, 0.15);
+  animation: floatTitle 3.2s ease-in-out infinite;
+}
+@keyframes floatTitle {
+  0%, 100% { transform: translateY(0) rotate(-0.4deg); }
+  50% { transform: translateY(-6px) rotate(0.4deg); }
+}
+/* rochers décoratifs de l'accueil */
+#home { position: relative; overflow: hidden; }
+.deco-rock {
+  position: absolute;
+  border: 3px solid var(--ink);
+  border-radius: 46%;
+  opacity: 0.5;
+  pointer-events: none;
+  animation: driftRock linear infinite;
+}
+.deco-rock.r1 { width: 90px; height: 76px; background: var(--tomato); right: 4%; top: 8%; animation-duration: 26s; }
+.deco-rock.r2 { width: 56px; height: 48px; background: var(--mint); right: 20%; bottom: 12%; animation-duration: 34s; }
+.deco-rock.r3 { width: 34px; height: 30px; background: #d9c9a8; right: 8%; bottom: 30%; animation-duration: 21s; }
+@keyframes driftRock {
+  from { transform: translateY(20px) rotate(0deg); }
+  to { transform: translateY(-30px) rotate(360deg); }
 }
 #tagline { font-size: 13.5px; font-style: italic; margin-top: 2px; }
 .topctl { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }

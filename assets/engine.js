@@ -118,7 +118,8 @@
     g.score += base * mult;
     if (g.score >= g.nextLifeAt) {
       g.ship.lives++;
-      g.nextLifeAt += 10000;
+      // première vie à 10 000, puis une tous les 15 000 : la tension tient
+      g.nextLifeAt += 15000;
       g.events.push({ type: 'extraLife', lives: g.ship.lives });
     }
   }

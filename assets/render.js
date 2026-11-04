@@ -398,14 +398,17 @@
         ctx.lineTo(bx - bu.vx * 0.016, by - bu.vy * 0.016);
         ctx.stroke();
       }
-      ctx.fillStyle = COL.tomato;
+      // tirs ennemis : losanges encre à cœur tomate — jamais confondus avec les rochers
       for (var e = 0; e < g.ebullets.length; e++) {
         var eb = g.ebullets[e];
+        var ex = lerpPos(eb.x, prev && prev.ebullets && prev.ebullets[e] ? prev.ebullets[e][0] : null, alpha);
+        var ey = lerpPos(eb.y, prev && prev.ebullets && prev.ebullets[e] ? prev.ebullets[e][1] : null, alpha);
         ctx.beginPath();
-        ctx.arc(lerpPos(eb.x, prev && prev.ebullets && prev.ebullets[e] ? prev.ebullets[e][0] : null, alpha),
-                lerpPos(eb.y, prev && prev.ebullets && prev.ebullets[e] ? prev.ebullets[e][1] : null, alpha),
-                3.4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(ex, ey - 6); ctx.lineTo(ex + 4.4, ey);
+        ctx.lineTo(ex, ey + 6); ctx.lineTo(ex - 4.4, ey);
+        ctx.closePath();
+        ctx.fillStyle = COL.tomato; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = COL.ink; ctx.stroke();
       }
       drawShip(g, prev, alpha);
 
